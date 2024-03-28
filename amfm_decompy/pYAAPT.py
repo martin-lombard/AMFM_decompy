@@ -220,36 +220,40 @@ class PitchObj(object):
                 up_version = np.zeros((file_size))
                 up_version[:beg_pad] = first_samp
                 voiced_frames = np.nonzero(samp_values)[0]
+
+                empty = len(voiced_frames) == 0
+                
                 edges = np.nonzero((voiced_frames[1:]-voiced_frames[:-1]) > 1)[0]
                 edges = np.insert(edges, len(edges), len(voiced_frames)-1)
                 voiced_frames = np.split(voiced_frames, edges+1)[:-1]
 
-                for frame in voiced_frames:
-                    up_interval = self.frames_pos[frame]
-                    tot_interval = np.arange(int(up_interval[0]-(self.frame_jump/2)),
-                                          int(up_interval[-1]+(self.frame_jump/2)))
-
-                    if interp_tech == 'pchip' and len(frame) > 2:
-                        up_version[tot_interval] = scipy_interp.pchip(
-                                                    up_interval,
-                                                    samp_values[frame])(tot_interval)
-
-                    elif interp_tech == 'spline' and len(frame) > 3:
-                        tck, u_original = scipy_interp.splprep(
-                                            [up_interval, samp_values[frame]],
-                                             u=up_interval)
-                        up_version[tot_interval] = scipy_interp.splev(tot_interval, tck)[1]
-
-                    # MD: In case len(frame)==2, above methods fail.
-                    #Use linear interpolation instead.
-                    elif len(frame) > 1:
-                        up_version[tot_interval] = scipy_interp.interp1d(
-                                                    up_interval,
-                                                    samp_values[frame],
-                                        fill_value='extrapolate')(tot_interval)
-
-                    elif len(frame) == 1:
-                        up_version[tot_interval] = samp_values[frame]
+                if not empty :
+                    for frame in voiced_frames:
+                        up_interval = self.frames_pos[frame]
+                        tot_interval = np.arange(int(up_interval[0]-(self.frame_jump/2)),
+                                              int(up_interval[-1]+(self.frame_jump/2)))
+    
+                        if interp_tech == 'pchip' and len(frame) > 2:
+                            up_version[tot_interval] = scipy_interp.pchip(
+                                                        up_interval,
+                                                        samp_values[frame])(tot_interval)
+    
+                        elif interp_tech == 'spline' and len(frame) > 3:
+                            tck, u_original = scipy_interp.splprep(
+                                                [up_interval, samp_values[frame]],
+                                                 u=up_interval)
+                            up_version[tot_interval] = scipy_interp.splev(tot_interval, tck)[1]
+    
+                        # MD: In case len(frame)==2, above methods fail.
+                        #Use linear interpolation instead.
+                        elif len(frame) > 1:
+                            up_version[tot_interval] = scipy_interp.interp1d(
+                                                        up_interval,
+                                                        samp_values[frame],
+                                            fill_value='extrapolate')(tot_interval)
+    
+                        elif len(frame) == 1:
+                            up_version[tot_interval] = samp_values[frame]
 
 
                 up_version[beg_pad+self.frame_jump*self.nframes:] = last_samp
